@@ -4,3 +4,5 @@ __pycache__/
 client_secret*.json
 tokens/
 config.yaml
+.pytest_cache/
+*.log
