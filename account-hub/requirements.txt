@@ -1,0 +1,8 @@
+flask>=3.0
+pyyaml>=6.0
+google-api-python-client>=2.100
+google-auth-oauthlib>=1.2
+keyring>=24
+# Windows のみ: 独立ウィンドウ表示とトースト通知
+pywebview>=5.0; sys_platform == "win32"
+win11toast>=0.35; sys_platform == "win32"

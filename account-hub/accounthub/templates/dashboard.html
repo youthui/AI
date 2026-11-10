@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account Hub</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#fff; --text:#1d2330; --muted:#667085; --line:#e3e6eb;
+  --ok:#1f9d55; --warn:#d98a00; --crit:#d92d20; --accent:#2f6fde; --chip:#eef1f5;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#14171c; --panel:#1c2027; --text:#e6e9ef; --muted:#98a2b3; --line:#2c323c;
+         --ok:#3ccf7a; --warn:#f5b13d; --crit:#ff6b5e; --accent:#6d9cff; --chip:#262b34; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.5 "Segoe UI","Yu Gothic UI","Meiryo",system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);
+  padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+header h1{font-size:17px;margin:0}
+.muted{color:var(--muted)}
+.sum{display:flex;gap:8px;flex-wrap:wrap}
+.pill{padding:2px 10px;border-radius:999px;background:var(--chip);font-size:13px}
+.pill b{margin-left:4px}
+.p-critical b{color:var(--crit)} .p-warn b{color:var(--warn)} .p-ok b{color:var(--ok)}
+.spacer{flex:1}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--text);
+  border-radius:6px;padding:3px 10px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+main{padding:16px;max-width:1400px;margin:0 auto}
+h2{font-size:15px;margin:22px 0 10px;display:flex;gap:8px;align-items:center}
+.alerts{border:1px solid var(--crit);border-radius:8px;background:var(--panel)}
+.alert{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-top:1px solid var(--line)}
+.alert:first-child{border-top:none}
+.alert .body{flex:1;min-width:0}
+.sev{font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px;color:#fff;white-space:nowrap}
+.sev-critical{background:var(--crit)} .sev-warn{background:var(--warn)} .sev-info{background:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--ok);
+  border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.card.st-warn{border-left-color:var(--warn)} .card.st-critical{border-left-color:var(--crit)}
+.card .top{display:flex;gap:8px;align-items:baseline}
+.card .name{font-weight:600;font-size:15px;flex:1;min-width:0;overflow-wrap:anywhere}
+.cat{font-size:11px;font-weight:700;padding:1px 6px;border-radius:4px;background:var(--accent);color:#fff;white-space:nowrap}
+.prov{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--chip);color:var(--muted)}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.row .k{color:var(--muted);font-size:12px;min-width:64px}
+.chip{background:var(--chip);border-radius:4px;padding:0 6px;font-size:12px}
+.stale{color:var(--warn);font-weight:600;font-size:12px}
+.links a{color:var(--accent);font-size:12px;margin-right:10px;text-decoration:none}
+.links a:hover{text-decoration:underline}
+.small{font-size:12px}
+.tbl{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.tbl th,.tbl td{text-align:left;padding:6px 10px;border-top:1px solid var(--line);vertical-align:top;font-size:13px}
+.tbl th{color:var(--muted);font-weight:600;border-top:none}
+.scroll{overflow-x:auto}
+.err{color:var(--crit)}
+.empty{padding:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Account Hub</h1>
+  <div class="sum">
+    <span class="pill p-critical">緊急<b>{{ v.counts.critical }}</b></span>
+    <span class="pill p-warn">注意<b>{{ v.counts.warn }}</b></span>
+    <span class="pill p-ok">正常<b>{{ v.counts.ok }}</b></span>
+    <span class="pill">要確認(手動)<b>{{ v.counts.stale }}</b></span>
+  </div>
+  <span class="spacer"></span>
+  <span class="muted small">更新 {{ v.now }}</span>
+  <button onclick="act('/api/poll', null, 3000)">今すぐ取得</button>
+</header>
+<main>
+
+{% if v.alerts %}
+<h2>未対応のアラート <span class="sev sev-critical">{{ v.alerts|length }}</span></h2>
+<div class="alerts">
+  {% for e in v.alerts %}
+  <div class="alert">
+    <span class="sev sev-{{ e.severity }}">{{ e.severity|upper }}</span>
+    <div class="body">
+      <div><b>{{ e.account_name }}</b> — {{ e.kind_label }}{% if e.device %}（{{ e.device }}）{% endif %}</div>
+      <div class="small">{{ e.note }}</div>
+      <div class="small muted">{{ e.when }}{% if e.location %} ・ {{ e.location }}{% endif %} ・ {{ e.subject }}</div>
+    </div>
+    <button onclick="act('/api/events/{{ e.id }}/ack')">対応済み</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<h2>アカウント <span class="muted small">{{ v.total }}</span></h2>
+<div class="grid">
+{% for cat, items in v.groups.items() %}
+  {% for it in items %}{% set a = it.a %}
+  <div class="card st-{{ it.status }}">
+    <div class="top">
+      <span class="cat">{{ cat }}</span>
+      <span class="name">{{ a.display_name }}</span>
+      <span class="prov">{{ a.provider }}</span>
+    </div>
+    {% if a.label %}<div class="small muted">{{ a.email }}</div>{% endif %}
+    <div class="row"><span class="k">承認方法</span>
+      {% for m in a.auth_methods %}<span class="chip">{{ m }}</span>{% else %}<span class="muted small">未登録</span>{% endfor %}
+    </div>
+    <div class="row"><span class="k">許可端末</span>
+      {% for d in it.allowed %}<span class="chip">{{ d }}</span>{% else %}<span class="muted small">制限なし</span>{% endfor %}
+    </div>
+    <div class="row small"><span class="k">最新通知</span>
+      {% if it.last_event %}<span>{{ it.last_event.when }} {{ it.last_event.kind_label }}{% if it.last_event.device %}（{{ it.last_event.device }}）{% endif %}</span>
+      {% else %}<span class="muted">なし</span>{% endif %}
+    </div>
+    <div class="row small"><span class="k">手動確認</span>
+      <span>{{ it.reviewed }}</span>
+      {% if it.stale %}<span class="stale">{{ v.stale_days }}日以上未確認</span>{% endif %}
+      <span class="spacer"></span>
+      <button onclick="act('/api/accounts/{{ a.id }}/reviewed')">確認した</button>
+    </div>
+    {% if a.notes %}<div class="small muted">{{ a.notes }}</div>{% endif %}
+    <div class="links">{% for name, url in a.links.items() %}<a href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ name }} ↗</a>{% endfor %}</div>
+  </div>
+  {% endfor %}
+{% endfor %}
+</div>
+
+<h2>デバイス</h2>
+<div class="scroll"><table class="tbl">
+  <tr><th>名前</th><th>種類</th><th>ログインを許可しているアカウント</th></tr>
+  {% for it in v.devices %}
+  <tr><td>{{ it.d.name }}</td><td>{{ it.d.type }}</td>
+      <td>{% for n in it.accounts %}<span class="chip">{{ n }}</span> {% else %}<span class="muted">—</span>{% endfor %}</td></tr>
+  {% else %}<tr><td colspan="3" class="empty">未登録</td></tr>{% endfor %}
+</table></div>
+
+<h2>取得元</h2>
+<div class="scroll"><table class="tbl">
+  <tr><th>ID</th><th>名前</th><th>最終成功</th><th>状態</th></tr>
+  {% for it in v.sources %}
+  <tr><td>{{ it.s.id }}</td><td>{{ it.s.label }}</td><td>{{ it.last_ok }}</td>
+      <td>{% if it.error %}<span class="err">{{ it.error }}</span>{% else %}正常{% endif %}</td></tr>
+  {% else %}<tr><td colspan="4" class="empty">未設定</td></tr>{% endfor %}
+</table></div>
+
+<h2>通知履歴 <span class="muted small">直近100件</span></h2>
+<div class="scroll"><table class="tbl">
+  <tr><th>日時</th><th>重大度</th><th>アカウント</th><th>種別</th><th>端末</th><th>判定</th><th>件名</th></tr>
+  {% for e in v.events %}
+  <tr><td>{{ e.when }}</td><td><span class="sev sev-{{ e.severity }}">{{ e.severity }}</span></td>
+      <td>{{ e.account_name }}</td><td>{{ e.kind_label }}</td><td>{{ e.device or '—' }}</td>
+      <td class="small">{{ e.note }}</td><td class="small muted">{{ e.subject }}</td></tr>
+  {% else %}<tr><td colspan="7" class="empty">まだありません</td></tr>{% endfor %}
+</table></div>
+
+</main>
+<script>
+const TOKEN = {{ token|tojson }};
+async function act(url, _body, delay){
+  const r = await fetch(url, {method:'POST', headers:{'X-Action-Token': TOKEN}});
+  if(!r.ok){ alert('失敗しました: ' + r.status); return; }
+  setTimeout(() => location.reload(), delay || 0);
+}
+// 60秒ごとに自動更新
+setInterval(() => location.reload(), 60000);
+</script>
+</body>
+</html>

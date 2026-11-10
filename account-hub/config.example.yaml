@@ -1,0 +1,106 @@
+# Account Hub 設定ファイル（例）
+# メールアドレス・デバイスはすべて仮の値です。自分の環境に書き換えてください。
+
+settings:
+  poll_minutes: 5          # メール取得の間隔（分）
+  review_stale_days: 30    # 各社画面での手動確認がこの日数を超えたら「要確認」
+  port: 8765
+  notify_min: critical     # この重大度以上で Windows 通知（info / warn / critical）
+
+# 自分が持っているデバイス。
+# match: 各社の通知メールに書かれる端末表記の一部（大文字小文字は区別しない）。
+#        実際の通知メールを見て調整してください。
+devices:
+  - id: pc-main
+    name: メインPC
+    type: Windows
+    match: ["Windows"]
+  - id: phone-main
+    name: Pixel
+    type: Android
+    match: ["Pixel", "Android"]
+  - id: iphone
+    name: iPhone
+    type: iOS
+    match: ["iPhone"]
+
+# メールを読み取る Gmail（集約用）。
+# 各アカウントのセキュリティ通知をこの Gmail に自動転送しておく（README 参照）。
+sources:
+  - id: hub
+    type: gmail
+    label: 集約用Gmail
+    query_days: 3
+
+accounts:
+  # --- Google ---
+  - id: g-security
+    provider: google
+    email: security.example@gmail.com
+    category: セキュリティ
+    auth_methods: [パスキー, セキュリティキー]
+    allowed_devices: [pc-main]         # このPC以外でのログインは緊急
+    on_unknown_device: critical
+    # 通知メールの端末表記は「Windows」程度の粒度しかないため、
+    # 他人の Windows でも許可端末と一致してしまう。厳格に見るなら
+    # signin_new も critical にして「新規ログイン通知＝すべて確認」にする。
+    severity_overrides: {signin_new: critical, auth_change: critical, password_change: critical, recovery_change: critical}
+    notes: 許可端末以外のログインは即対応
+
+  - id: g-finance
+    provider: google
+    email: finance.example@gmail.com
+    category: 金融
+    auth_methods: [パスキー, 認証アプリ]
+    allowed_devices: [pc-main, phone-main]
+    on_unknown_device: critical
+    severity_overrides: {password_change: critical, recovery_change: critical}
+
+  - id: g-shopping
+    provider: google
+    email: shopping.example@gmail.com
+    category: 購入
+    auth_methods: [パスキー]
+
+  - id: g-private
+    provider: google
+    email: private.example@gmail.com
+    category: プライベート
+    auth_methods: [パスキー, SMS]
+
+  - id: g-game
+    provider: google
+    email: game.example@gmail.com
+    category: ゲーム
+    auth_methods: [認証アプリ]
+
+  - id: g-dev
+    provider: google
+    email: dev.example@gmail.com
+    category: プログラム
+    auth_methods: [パスキー, セキュリティキー]
+
+  - id: g-other1
+    provider: google
+    email: other1.example@gmail.com
+    category: 未分類
+    auth_methods: []
+
+  - id: g-other2
+    provider: google
+    email: other2.example@gmail.com
+    category: 未分類
+    auth_methods: []
+
+  # --- 端末用 ---
+  - id: ms-device
+    provider: microsoft
+    email: device.example@outlook.jp
+    category: 端末用
+    auth_methods: [Microsoft Authenticator, Windows Hello]
+
+  - id: apple-device
+    provider: apple
+    email: apple.example@icloud.com
+    category: 端末用
+    auth_methods: [信頼できるデバイス, 信頼できる電話番号]
